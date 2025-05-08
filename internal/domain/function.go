@@ -17,11 +17,9 @@ type Function struct {
 
 func NewFunction(name string, author string, code []byte) Function {
 	return Function{
-		ID:      uuid.New(),
-		Name:    name,
-		Author:  author,
-		Code:    code,
-		Version: 0,
-		Created: time.Now(),
+		ID:     uuid.New(),
+		Name:   name,
+		Author: author,
+		Code:   code,
 	}
 }

@@ -1,22 +1,41 @@
 version: "3.9"
+
 services:
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
-
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: faas
+      POSTGRES_USER:     faas
       POSTGRES_PASSWORD: pass
-      POSTGRES_DB: faas
+      POSTGRES_DB:       faas
+    healthcheck:                      
+      test: ["CMD-SHELL", "pg_isready -U faas"]
+      interval: 5s
+      retries: 10
     ports: ["5432:5432"]
-
+  migrator:                     
+    image: migrate/migrate:v4.17.1
+    depends_on:
+      postgres:
+        condition: service_healthy  
+    volumes:
+      - ./migrations:/migrations
+    command: [
+      "-path", "/migrations",
+      "-database", "postgres://faas:pass@postgres:5432/faas?sslmode=disable",
+      "-verbose", "up"
+    ]
+    restart: "on-failure"             
   faas:
     build: .
-    depends_on: [redis, postgres]
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
     environment:
       REDIS_URL: "redis://redis:6379/0"
       PG_URL: "postgres://faas:pass@postgres:5432/faas?sslmode=disable"
     ports: ["8080:8080"]
-    command: ["./faas"]
